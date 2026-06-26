@@ -1,0 +1,21 @@
+{
+  "name": "meow-chime",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "喵喵音阶编钟 - 用魔法棒唤醒7只音阶猫咪，演奏属于你的喵喵交响乐",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pixi.js": "^8.6.6",
+    "gsap": "^3.12.7",
+    "tone": "^15.1.22"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
