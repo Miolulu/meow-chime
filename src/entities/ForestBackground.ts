@@ -14,6 +14,8 @@ export class ForestBackground {
   private time = 0;
   private w: number;
   private h: number;
+  private bgSprite: PIXI.Sprite | null = null;
+  private fallbackSky: PIXI.Graphics | null = null;
 
   constructor(private stage: PIXI.Container, w: number, h: number) {
     this.w = w;
@@ -24,10 +26,10 @@ export class ForestBackground {
   private async build(): Promise<void> {
     try {
       const texture = await PIXI.Assets.load<PIXI.Texture>('/assets/bg_forest.png');
-      const bg = new PIXI.Sprite(texture);
-      bg.width = this.w;
-      bg.height = this.h;
-      this.stage.addChildAt(bg, 0);
+      this.bgSprite = new PIXI.Sprite(texture);
+      this.bgSprite.width = this.w;
+      this.bgSprite.height = this.h;
+      this.stage.addChildAt(this.bgSprite, 0);
     } catch {
       this.drawFallbackSky();
     }
@@ -50,6 +52,7 @@ export class ForestBackground {
       sky.fill({ color });
     }
     this.stage.addChildAt(sky, 0);
+    this.fallbackSky = sky;
   }
 
   private drawFireflies(): void {
@@ -86,7 +89,39 @@ export class ForestBackground {
   }
 
   public resize(w: number, h: number): void {
+    const prevW = this.w || 1;
+    const prevH = this.h || 1;
     this.w = w;
     this.h = h;
+
+    if (this.bgSprite) {
+      this.bgSprite.width = this.w;
+      this.bgSprite.height = this.h;
+    }
+
+    if (this.fallbackSky) {
+      this.fallbackSky.clear();
+      const steps = 12;
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const y = t * this.h;
+        const height = this.h / steps + 1;
+        const r = Math.round(0x24 + (0x33 - 0x24) * t);
+        const g = Math.round(0x1F + (0x2C - 0x1F) * t);
+        const b = Math.round(0x3A + (0x52 - 0x3A) * t);
+        const color = (r << 16) | (g << 8) | b;
+        this.fallbackSky.rect(0, y, this.w, height);
+        this.fallbackSky.fill({ color });
+      }
+    }
+
+    const sx = this.w / prevW;
+    const sy = this.h / prevH;
+    this.fireflies.forEach((ff) => {
+      ff.x *= sx;
+      ff.y *= sy;
+      ff.g.position.x *= sx;
+      ff.g.position.y *= sy;
+    });
   }
 }

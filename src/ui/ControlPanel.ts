@@ -17,6 +17,8 @@ const ICON_FILES: Record<string, string> = {
 export class ControlPanel {
   public container: PIXI.Container;
   private buttons: Map<string, PIXI.Container> = new Map();
+  private static readonly BUTTON_GAP = 70;
+  private static readonly BUTTON_WIDTH = 50;
 
   constructor(private callbacks: ControlPanelCallbacks) {
     this.container = new PIXI.Container();
@@ -33,7 +35,7 @@ export class ControlPanel {
 
     items.forEach((item, i) => {
       const btn = this.createIconButton(item.id, item.label, item.cb);
-      btn.position.set(i * 70, 0);
+      btn.position.set(i * ControlPanel.BUTTON_GAP, 0);
       this.container.addChild(btn);
       this.buttons.set(item.id, btn);
     });
@@ -97,5 +99,9 @@ export class ControlPanel {
     if (!btn) return;
     const labelText = btn.children[1] as PIXI.Text;
     if (labelText) labelText.text = isPlaying ? '停止' : '播放';
+  }
+
+  public getTotalWidth(): number {
+    return ControlPanel.BUTTON_GAP * 3 + ControlPanel.BUTTON_WIDTH;
   }
 }

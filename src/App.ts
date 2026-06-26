@@ -88,6 +88,7 @@ export class App {
   private title!: PIXI.Text;
   private subtitle!: PIXI.Text;
   private forestBg!: ForestBackground;
+  private catPlatform!: PIXI.Graphics;
 
   constructor() {
     this.app = new PIXI.Application();
@@ -269,7 +270,7 @@ export class App {
       '⌨️  按 A S D F G H J → 键盘演奏',
       '🪄  移动鼠标 → 魔法棒拖尾闪烁',
       '🎵  点击「随机」→ 森林中响起旋律',
-      '🔊  按 M → 静音/取消静音',
+      '🎚️  用下方按钮管理演奏流程',
     ];
 
     instructions.forEach((text, i) => {
@@ -379,37 +380,12 @@ export class App {
     this.createCats();
     this.particleSystem = new ParticleSystem(this.mainLayer);
     this.mainLayer.addChild(this.wandCursor.container);
-
-    // Octave selector: below cats
-    const osw = this.octaveSelector.getTotalWidth();
-    this.octaveSelector.container.position.set(
-      (this.app.screen.width - osw) / 2,
-      this.app.screen.height * 0.6 + 120,
-    );
     this.mainLayer.addChild(this.octaveSelector.container);
-
-    // Timbre selector: below octave
-    const tsw = this.timbreSelector.getTotalWidth();
-    this.timbreSelector.container.position.set(
-      (this.app.screen.width - tsw) / 2,
-      this.app.screen.height - 180,
-    );
     this.mainLayer.addChild(this.timbreSelector.container);
-
-    // Melody recorder
-    this.melodyRecorder.container.position.set(
-      (this.app.screen.width - 520) / 2,
-      this.app.screen.height - 150,
-    );
     this.mainLayer.addChild(this.melodyRecorder.container);
-
-    // Control buttons at bottom
-    const totalBtnWidth = 4 * 70;
-    this.controlPanel.container.position.set(
-      (this.app.screen.width - totalBtnWidth) / 2,
-      this.app.screen.height - 70,
-    );
     this.mainLayer.addChild(this.controlPanel.container);
+
+    this.layoutScene(this.app.screen.width, this.app.screen.height);
   }
 
   private createBackground(): void {
@@ -454,26 +430,78 @@ export class App {
   }
 
   private createCats(): void {
-    const catCount = CAT_CONFIGS.length;
-    const spacing = Math.min(140, (this.app.screen.width - 100) / catCount);
-    const totalWidth = spacing * (catCount - 1);
-    const startX = (this.app.screen.width - totalWidth) / 2;
-    const catY = this.app.screen.height * 0.6;
-
-    const platform = new PIXI.Graphics();
-    platform.roundRect(startX - 60, catY + 55, totalWidth + 120, 12, 6);
-    platform.fill({ color: 0x355A4B, alpha: 0.7 });
-    platform.stroke({ color: 0x4A7D62, width: 1, alpha: 0.4 });
-    this.mainLayer.addChild(platform);
+    this.catPlatform = new PIXI.Graphics();
+    this.mainLayer.addChild(this.catPlatform);
 
     CAT_CONFIGS.forEach((config, i) => {
       const cat = new Cat(config);
-      cat.container.position.set(startX + i * spacing, catY);
       cat.onTrigger = () => this.onCatTriggered(i);
       this.cats.push(cat);
       this.mainLayer.addChild(cat.container);
     });
 
+  }
+
+  private getLayoutMetrics(w: number, h: number): {
+    spacing: number;
+    totalWidth: number;
+    startX: number;
+    catY: number;
+    catScale: number;
+  } {
+    const catCount = CAT_CONFIGS.length;
+    const spacing = Math.max(50, Math.min(140, (w - 72) / (catCount - 1)));
+    const totalWidth = spacing * (catCount - 1);
+    const startX = (w - totalWidth) / 2;
+    const catY = h * (w < 768 ? 0.54 : 0.6);
+    const catScale = Math.max(0.58, Math.min(1, w / 1100));
+    return { spacing, totalWidth, startX, catY, catScale };
+  }
+
+  private drawCatPlatform(startX: number, totalWidth: number, catY: number): void {
+    this.catPlatform.clear();
+    this.catPlatform.roundRect(startX - 50, catY + 48, totalWidth + 100, 10, 5);
+    this.catPlatform.fill({ color: 0x355A4B, alpha: 0.7 });
+    this.catPlatform.stroke({ color: 0x4A7D62, width: 1, alpha: 0.4 });
+  }
+
+  private layoutScene(w: number, h: number): void {
+    const { spacing, totalWidth, startX, catY, catScale } = this.getLayoutMetrics(w, h);
+    this.drawCatPlatform(startX, totalWidth, catY);
+
+    this.cats.forEach((cat, i) => {
+      cat.container.scale.set(catScale);
+      cat.container.position.set(startX + i * spacing, catY);
+    });
+
+    const octaveScale = Math.max(0.78, Math.min(1, w / 560));
+    const timbreScale = Math.max(0.62, Math.min(1, w / 760));
+    const recorderScale = Math.max(0.62, Math.min(1, w / 620));
+    const controlsScale = Math.max(0.72, Math.min(1, w / 420));
+
+    this.octaveSelector.container.scale.set(octaveScale);
+    this.timbreSelector.container.scale.set(timbreScale);
+    this.melodyRecorder.container.scale.set(recorderScale);
+    this.controlPanel.container.scale.set(controlsScale);
+
+    const controlsWidth = this.controlPanel.getTotalWidth() * controlsScale;
+    const controlsHeight = 50 * controlsScale;
+    const recorderWidth = 520 * recorderScale;
+    const recorderHeight = 56 * recorderScale;
+    const timbreWidth = this.timbreSelector.getTotalWidth() * timbreScale;
+    const timbreHeight = 34 * timbreScale;
+    const octaveWidth = this.octaveSelector.getTotalWidth() * octaveScale;
+    const octaveHeight = 44 * octaveScale;
+
+    const controlsY = h - controlsHeight - 14;
+    const recorderY = controlsY - recorderHeight - 12;
+    const timbreY = recorderY - timbreHeight - 12;
+    const octaveY = Math.max(catY + 85 * catScale, timbreY - octaveHeight - 14);
+
+    this.controlPanel.container.position.set((w - controlsWidth) / 2, controlsY);
+    this.melodyRecorder.container.position.set((w - recorderWidth) / 2, recorderY);
+    this.timbreSelector.container.position.set((w - timbreWidth) / 2, timbreY);
+    this.octaveSelector.container.position.set((w - octaveWidth) / 2, octaveY);
   }
 
   /* ─── Audio ─── */
@@ -662,23 +690,6 @@ export class App {
     this.title.position.set(w / 2, 50);
     this.subtitle.position.set(w / 2, 82);
 
-    const catCount = CAT_CONFIGS.length;
-    const spacing = Math.min(140, (w - 100) / catCount);
-    const totalWidth = spacing * (catCount - 1);
-    const startX = (w - totalWidth) / 2;
-    const catY = h * 0.6;
-
-    this.cats.forEach((cat, i) => {
-      cat.container.position.set(startX + i * spacing, catY);
-    });
-
-    const tsw = this.timbreSelector.getTotalWidth();
-    this.timbreSelector.container.position.set((w - tsw) / 2, h - 180);
-    this.melodyRecorder.container.position.set((w - 520) / 2, h - 150);
-    const totalBtnWidth = 4 * 70;
-    this.controlPanel.container.position.set((w - totalBtnWidth) / 2, h - 70);
-
-    const osw = this.octaveSelector.getTotalWidth();
-    this.octaveSelector.container.position.set((w - osw) / 2, catY + 120);
+    this.layoutScene(w, h);
   }
 }
